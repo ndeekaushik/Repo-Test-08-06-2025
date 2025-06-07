@@ -1,0 +1,94 @@
+name: Deploy to GKE
+
+# on:
+#   push:
+#     branches:
+#       - master
+
+on:
+  workflow_dispatch: # Manual trigger for this workflow
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          version: 'latest'
+
+      - name: Install gke-gcloud-auth-plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin --quiet
+
+      - name: Configure gke-gcloud-auth-plugin
+        run: echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+
+      - name: Debug Environment Variables
+        run: |
+          echo "Cluster: ${{ secrets.GKE_CLUSTER }}"
+          echo "Zone: ${{ secrets.GCP_REGION }}"
+          echo "Project: ${{ secrets.GCP_PROJECT }}"
+
+      # Authenticate with GKE
+      - name: Authenticate with GKE
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER }} \
+            --zone ${{ secrets.GCP_REGION }} \
+            --project ${{ secrets.GCP_PROJECT }}
+
+      # - name: Delete docker secret  for docker registry
+      #   run: |
+      #     kubectl delete secret regcred
+
+      - name: Create name space if doesn't exists
+        run: |
+          if ! kubectl get namespace ${{ secrets.GKE_NAMESPACE }} >/dev/null 2>&1; then
+          kubectl create namespace ${{ secrets.GKE_NAMESPACE }}
+          fi
+
+      - name: Create secret for docker registry
+        run: |
+          if ! kubectl get secret regcred -n ${{ secrets.GKE_NAMESPACE }} >/dev/null 2>&1; then
+          kubectl create secret docker-registry regcred \
+            --docker-server=${{ secrets.ARTIFACTORY_URL }} \
+            --docker-username=${{ secrets.ARTIFACTORY_USERNAME }} \
+            --docker-password=${{ secrets.ARTIFACTORY_PASSWORD }} \
+            --docker-email=sweetpsharma86@gmail.com \
+            -n ${{ secrets.GKE_NAMESPACE }}
+          fi
+
+      # - name: Delete all microservices
+      #   run: |
+      #     kubectl delete all -l app=microservice1
+      #     kubectl delete all -l app=microservice2
+      #     kubectl delete all -l app=microservice3
+      
+      - name: Deploy microservices
+        run: |
+          kubectl apply -f ./k8s/microservice1-deployment.yaml -n ${{ secrets.GKE_NAMESPACE }}
+          kubectl apply -f ./k8s/microservice2-deployment.yaml -n ${{ secrets.GKE_NAMESPACE }}
+          kubectl apply -f ./k8s/microservice3-deployment.yaml -n ${{ secrets.GKE_NAMESPACE }}
+      
+      - name: Expose services
+        run: |
+          kubectl apply -f ./k8s/microservice1-service.yaml -n ${{ secrets.GKE_NAMESPACE }}
+          kubectl apply -f ./k8s/microservice2-service.yaml -n ${{ secrets.GKE_NAMESPACE }}
+          kubectl apply -f ./k8s/microservice3-service.yaml -n ${{ secrets.GKE_NAMESPACE }}
+      
+      # - name: Deploy the GCP Ingress controller
+      #   run: |
+      #     kubectl apply -f ./k8s/ingress.yaml
+
+      # - name: Verify Load Balancer code
+      #   run: |
+      #     kubectl get ingress -n ${{ secrets.GKE_NAMESPACE }}

@@ -1,0 +1,28 @@
+# microservice3-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: microservice3-svc
+  namespace: ns-vs-demo
+spec:
+  selector:
+    app: microservice3
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8083
+---
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: microservice3-loadbalancer
+  namespace: ns-vs-demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: microservice3
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8083

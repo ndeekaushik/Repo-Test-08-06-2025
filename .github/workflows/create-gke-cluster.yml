@@ -1,0 +1,48 @@
+name: Create or Update GKE Cluster
+
+on:
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  create-cluster:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout Code
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    # Step 2: Authenticate with GCP
+    - name: Authenticate with GCP
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    # Step 3: Set up Google Cloud SDK
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT }}
+
+    # Step 4: Set GCP Project
+    - name: Set GCP Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT }}
+
+    # Step 5: Create or update the GKE Cluster
+    - name: Create or Update GKE Cluster
+      run: |
+        set -e
+        echo "Checking if GKE cluster exists..."
+        if ! gcloud container clusters describe ${{ secrets.GKE_CLUSTER }} --region ${{ secrets.GCP_REGION }} >/dev/null 2>&1; then
+          echo "Cluster not found. Creating GKE cluster..."
+          gcloud container clusters create ${{ secrets.GKE_CLUSTER }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --num-nodes 3 \
+            --machine-type e2-medium \
+            --enable-ip-alias \
+            --release-channel regular
+        else
+          echo "Cluster already exists. Skipping creation."
+        fi

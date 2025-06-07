@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  microservice1:
+    image: testcicdvs.jfrog.io/vs-docker-repo/microservice1:4.0.0
+    container_name: microservice1-container
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+    networks:
+      - microservices-network
+
+  microservice2:
+    image: testcicdvs.jfrog.io/vs-docker-repo/microservice2:4.0.0
+    container_name: microservice2-container
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+    networks:
+      - microservices-network
+
+  microservice3:
+    image: testcicdvs.jfrog.io/vs-docker-repo/microservice3:4.0.0
+    container_name: microservice3-container
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge

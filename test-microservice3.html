@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Product</title>
+</head>
+<body>
+    <h2>Create Product</h2>
+    
+    <form id="productForm">
+		
+        <label for="name">Product Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+        <label for="price">Product Price:</label><br>
+        <input type="number" id="price" name="price" required><br><br>
+        <button type="submit">Create Product</button>
+    </form>
+
+    <h3>Created Product:</h3>
+    <pre id="productDetails"></pre>
+
+    <script>
+    const productForm = document.getElementById('productForm');
+    const productDetails = document.getElementById('productDetails');
+
+    productForm.addEventListener('submit', async (event) => {
+        event.preventDefault();  // Prevent the form from submitting normally
+
+        const name = document.getElementById('name').value;
+        const price = document.getElementById('price').value;
+
+        // Validate price input
+        const parsedPrice = parseFloat(price);
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+            productDetails.textContent = 'Error: Please enter a valid price.';
+            return;
+        }
+
+        const product = {
+            name: name,
+            price: parsedPrice
+        };
+
+        // Make the POST request to the backend
+        try {
+            const response = await fetch('http://localhost:8080/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(product)
+            });
+
+            if (response.ok) {
+                const createdProduct = await response.json();
+                // Display the created product on the screen
+                productDetails.textContent = JSON.stringify(createdProduct, null, 2);
+            } else {
+                productDetails.textContent = 'Error: Unable to create product.';
+            }
+        } catch (error) {
+            productDetails.textContent = 'Error: ' + error.message;
+        }
+    });
+</script>
+
+</body>
+</html>

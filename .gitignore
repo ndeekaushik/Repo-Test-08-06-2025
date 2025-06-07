@@ -1,0 +1,11 @@
+/target/
+.vscode/
+microservice1/target/
+microservice2/target/
+microservice3/target/
+terraform/.terraform/
+terraform/gcp-key.json
+terraform/.terraform.lock.hcl
+terraform/.terraform.tfstate.lock.info
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup

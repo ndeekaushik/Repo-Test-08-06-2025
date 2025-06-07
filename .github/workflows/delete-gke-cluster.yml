@@ -1,0 +1,43 @@
+name: Destroy GKE Cluster
+
+on:
+  workflow_dispatch: # Manual trigger for this workflow
+
+jobs:
+  delete-cluster:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout Code
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    # Step 2: Authenticate with GCP
+    - name: Authenticate with GCP
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    # Step 3: Set up Google Cloud SDK
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: ${{ secrets.GCP_PROJECT }}
+
+    # Step 4: Set GCP Project
+    - name: Set GCP Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT }}
+        
+    # Step 5: Delete GKE Cluster
+    - name: Delete GKE Cluster
+      run: |
+        set -e
+        echo "Checking if GKE cluster exists..."
+        if gcloud container clusters describe ${{ secrets.GKE_CLUSTER }} --region ${{ secrets.GCP_REGION }} >/dev/null 2>&1; then
+          echo "Cluster found. Deleting GKE cluster..."
+          gcloud container clusters delete ${{ secrets.GKE_CLUSTER }} --region ${{ secrets.GCP_REGION }} --quiet
+        else
+          echo "No cluster found with the name ${{ secrets.GKE_CLUSTER }}. Skipping deletion."
+        fi

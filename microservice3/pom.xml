@@ -1,0 +1,100 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>microservice3</artifactId>
+    <version>4.0.0</version>
+    <packaging>jar</packaging>
+
+    <!-- Parent POM from Spring Boot -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.1.0</version>  <!-- Use the correct Spring Boot version -->
+    </parent>
+
+    <properties>
+		<jdk.version>1.8</jdk.version>
+		<spring.version>6.0.0</spring.version>
+		<junit.version>4.11</junit.version>
+		<log4j.version>1.2.17</log4j.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<sonar.projectKey>project-sonar-key</sonar.projectKey>
+    	<sonar.host.url>http://localhost:9000</sonar.host.url> <!-- Replace with your SonarQube URL -->
+    	<sonar.login>sqp_903493aa695e7c035b49e2a560b572dddabfa697</sonar.login>
+		<sonar.sources>src/main/java</sonar.sources>
+    	
+    	<sonar.java.binaries>target/classes</sonar.java.binaries>
+	</properties>
+    <dependencies>
+        <!-- compile dependencies -->
+        
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+    		<groupId>org.springframework</groupId>
+    		<artifactId>spring-web</artifactId>
+    		<version>${spring.version}</version>
+  		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+        <!-- Spring Boot dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <name>a0q0ayyzix1tu-artifactory-primary-0-releases</name>
+            <url>https://testcicdvs.jfrog.io/artifactory/vsrepo-libs-release</url>
+        </repository>
+    <snapshotRepository>
+        <id>snapshots</id>
+        <name>a0q0ayyzix1tu-artifactory-primary-0-snapshots</name>
+        <url>https://testcicdvs.jfrog.io/artifactory/vsrepo-libs-snapshot</url>
+    </snapshotRepository>
+</distributionManagement>
+    <build>
+        <plugins>
+            <!-- Add Spring Boot Maven Plugin -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.1.1</version> <!-- Ensure you're using the correct version -->
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>  <!-- Consider using a stable version -->
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>  <!-- Include all test classes -->
+                    </includes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

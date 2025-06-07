@@ -1,0 +1,115 @@
+name: Build, Push to Artifactory, and Deploy to GKE
+
+on:
+  workflow_dispatch: # Manual trigger for this workflow
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_URL }}
+      RELEASE_VERSION: 4.0.0
+      ARTIFACTORY_DOCKER_REPO: ${{ secrets.ARTIFACTORY_DOCKER_REPO }}
+      GKE_PROJECT: ${{ secrets.GCP_PROJECT }}
+      GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+      GKE_ZONE: ${{ secrets.GCP_REGION }}
+      DOCKER_REGISTRY: ${{ secrets.ARTIFACTORY_DOCKER_REGISTRY }}
+      DOCKER_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+      GCP_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+
+    steps:
+    # Checkout the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    # Set up Java for Maven builds
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # Build and Deploay the microservices using Maven
+    - name: Build and Deploy with Maven
+      env:
+        ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_USERNAME }}
+        ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+      run: mvn clean deploy -DskipTests -s ./settings.xml
+
+    # Log in to Artifactory Docker registry
+    - name: Docker Login to Artifactory
+      run: echo $DOCKER_PASSWORD | docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+
+    # Build Docker images for each microservice
+    - name: Build Docker Images
+      run: |
+        docker build -t $ARTIFACTORY_URL/$ARTIFACTORY_DOCKER_REPO/microservice1:$RELEASE_VERSION ./microservice1
+        docker build -t $ARTIFACTORY_URL/$ARTIFACTORY_DOCKER_REPO/microservice2:$RELEASE_VERSION ./microservice2
+        docker build -t $ARTIFACTORY_URL/$ARTIFACTORY_DOCKER_REPO/microservice3:$RELEASE_VERSION ./microservice3
+
+    # Push Docker images to Artifactory
+    - name: Push Docker Images to Artifactory
+      run: |
+        docker push $ARTIFACTORY_URL/$ARTIFACTORY_DOCKER_REPO/microservice1:$RELEASE_VERSION
+        docker push $ARTIFACTORY_URL/$ARTIFACTORY_DOCKER_REPO/microservice2:$RELEASE_VERSION
+        docker push $ARTIFACTORY_URL/$ARTIFACTORY_DOCKER_REPO/microservice3:$RELEASE_VERSION
+
+    # Step Authenticate with GCP
+    - name: Authenticate with GCP
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    # Set up Google Cloud SDK
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        credentials_json: $GCP_CREDENTIALS
+    
+    # Set GCP Project
+    - name: Set GCP Project
+      run: gcloud config set project ${{ secrets.GCP_PROJECT }}
+
+    # Install gke-gcloud-auth-plugin
+    - name: Install gke-gcloud-auth-plugin
+      run: |
+        gcloud components install gke-gcloud-auth-plugin --quiet
+
+    - name: Configure gke-gcloud-auth-plugin
+      run: echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+
+    # Authenticate with GKE
+    - name: Authenticate with GKE
+      run: |
+        gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER }} \
+          --zone ${{ secrets.GCP_REGION }} \
+          --project ${{ secrets.GCP_PROJECT }}
+
+    - name: Create name space if doesn't exists
+      run: |
+        if ! kubectl get namespace ${{ secrets.GKE_NAMESPACE }} >/dev/null 2>&1; then
+        kubectl create namespace ${{ secrets.GKE_NAMESPACE }}
+        fi
+
+    - name: Create secret for docker registry
+      run: |
+        if ! kubectl get secret regcred -n ${{ secrets.GKE_NAMESPACE }} >/dev/null 2>&1; then
+        kubectl create secret docker-registry regcred \
+          --docker-server=${{ secrets.ARTIFACTORY_URL }} \
+          --docker-username=${{ secrets.ARTIFACTORY_USERNAME }} \
+          --docker-password=${{ secrets.ARTIFACTORY_PASSWORD }} \
+          --docker-email=sweetpsharma86@gmail.com \
+          -n ${{ secrets.GKE_NAMESPACE }}
+        fi
+
+    # Deploy microservices to GKE
+    - name: Deploy to GKE
+      run: |
+        kubectl apply -f ./k8s/microservice1-deployment.yaml -n ${{ secrets.GKE_NAMESPACE }}
+        kubectl apply -f ./k8s/microservice2-deployment.yaml -n ${{ secrets.GKE_NAMESPACE }}
+        kubectl apply -f ./k8s/microservice3-deployment.yaml -n ${{ secrets.GKE_NAMESPACE }}
+        kubectl apply -f ./k8s/microservice1-service.yaml -n ${{ secrets.GKE_NAMESPACE }}
+        kubectl apply -f ./k8s/microservice2-service.yaml -n ${{ secrets.GKE_NAMESPACE }}
+        kubectl apply -f ./k8s/microservice3-service.yaml -n ${{ secrets.GKE_NAMESPACE }}

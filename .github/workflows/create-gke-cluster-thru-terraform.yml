@@ -1,0 +1,74 @@
+name: Create GKE Cluster using Terraform
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+on:
+  workflow_dispatch: # Manual trigger for this workflow
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Terraform
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      # Step 3: Authenticate with GCP
+      - name: Write Google Credentials to File
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/terraform/gcp-key.json
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" > $GOOGLE_APPLICATION_CREDENTIALS
+          cat $GOOGLE_APPLICATION_CREDENTIALS
+
+      - name: Validate Credentials File
+        run: jq . ${{ github.workspace }}/terraform/gcp-key.json
+
+
+      # Step 4: Change the directory to terraform
+      - name: Change Directory to terraform
+        run: |
+          echo "Current working directory"
+          pwd
+
+          echo "change directory to terraform folder"
+          cd terraform
+
+          echo "Listing files in the Terraform directory"
+          ls -lrt
+
+          echo "Listing files in the Terraform directory"
+
+      # Step 4: Initialize Terraform
+      - name: Terraform Init
+        run: terraform -chdir=./terraform init
+
+      # Step 5: Terraform Plan
+      - name: Run Terraform Plan
+        run: |
+          terraform -chdir=./terraform plan \
+          -var "project_id=${{ secrets.GCP_PROJECT }}" \
+          -var "region=${{ secrets.GCP_REGION }}" \
+          -var "cluster_name=${{ secrets.GKE_CLUSTER }}" \
+          -var "credentials_file=${{ github.workspace }}/terraform/gcp-key.json"
+
+
+      # Step 6: Terraform Apply
+      - name: Terraform Apply
+        run: |
+          terraform -chdir=./terraform apply \
+             -auto-approve \
+             -var "credentials_file=${{ github.workspace }}/terraform/gcp-key.json" \
+             -var "project_id=${{ secrets.GCP_PROJECT }}" \
+             -var "region=${{ secrets.GCP_REGION }}" \
+             -var "cluster_name=${{ secrets.GKE_CLUSTER }}"

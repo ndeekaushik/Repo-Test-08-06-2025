@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microservice2
+  namespace: ns-vs-demo
+  labels:
+    app: microservice2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: microservice2
+  template:
+    metadata:
+      labels:
+        app: microservice2
+    spec:
+      containers:
+      - name: microservice2
+        image: testcicdvs.jfrog.io/vs-docker-repo/microservice2:4.0.0
+        ports:
+        - containerPort: 8082
+      imagePullSecrets:
+      - name: regcred

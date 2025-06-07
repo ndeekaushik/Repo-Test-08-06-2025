@@ -1,0 +1,12 @@
+# ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ms-ingress-1
+  namespace: ns-vs-demo
+spec:
+  defaultBackend:
+    service:
+      name: microservice1-svc
+      port:
+        number: 80
